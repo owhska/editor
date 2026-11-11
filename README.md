@@ -1,11 +1,11 @@
-# ow
+# ed
 
 A [Micro GNU Emacs](https://github.com/troglobit/mg)-style editor rewritten in Rust, with
 **built-in git** (libgit2, no `git` binary needed) and **wide syntax highlighting**.
-Binary name: `ow`.
+Binary name: `ed`.
 
-    cargo build --release      # target/release/ow
-    ow [+LINE] [FILE...]       # ow --help, ow --list-languages
+    cargo build --release      # target/release/ed
+    ed [+LINE] [FILE...]       # ed --help, ed --list-languages
 
 ## Emacs core
 Movement (`C-f C-b C-n C-p C-a C-e M-f M-b M-< M-> C-v M-v C-l M-g g M-m M-{ M-}`), kill ring
