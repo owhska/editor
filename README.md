@@ -4,6 +4,8 @@ A [Micro GNU Emacs](https://github.com/troglobit/mg)-style editor rewritten in R
 **built-in git** (libgit2, no `git` binary needed) and **wide syntax highlighting**.
 Binary name: `ed`.
 
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
     cargo build --release      # target/release/ed
     ed [+LINE] [FILE...]       # ed --help, ed --list-languages
 
