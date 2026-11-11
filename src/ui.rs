@@ -168,12 +168,6 @@ fn render_window(
             let s = format!("{:>w$} ", li + 1, w = gl - 1);
             fbuf.set_string(rect.x + gm as u16, y, s, fg(c(DIM)));
         }
-        if kind == BufKind::File && li == cursor.line && is_active {
-            fbuf.set_style(
-                Rect::new(rect.x + (gm + gl) as u16, y, text_w as u16, 1),
-                Style::default().bg(c(LINE)),
-            );
-        }
         let line = b.lines[li].clone();
         let styles = match kind {
             BufKind::File | BufKind::GitDiff => b.line_styles(li),
