@@ -1,13 +1,13 @@
-# kk
+# em
 
 A [Micro GNU Emacs](https://github.com/troglobit/mg)-style editor rewritten in Rust, with
 **built-in git** (libgit2, no `git` binary needed) and **wide syntax highlighting**.
-Binary name: `kk`.
+Binary name: `em`.
 
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
     cargo build --release      # target/release/ed
-    kk [+LINE] [FILE...]       # kk --help, kk --list-languages
+    em [+LINE] [FILE...]       # em --help, em --list-languages
 
 ## Emacs core
 Movement (`C-f C-b C-n C-p C-a C-e M-f M-b M-< M-> C-v M-v C-l M-g g M-m M-{ M-}`), kill ring
