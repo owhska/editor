@@ -1,12 +1,12 @@
 [package]
-name = "kk"
+name = "em"
 version = "0.1.0"
 edition = "2024"
 description = "Micro GNU Emacs clone in Rust with built-in git and wide syntax highlighting"
 license = "Unlicense"
 
 [[bin]]
-name = "kk"
+name = "em"
 path = "src/main.rs"
 
 [dependencies]
