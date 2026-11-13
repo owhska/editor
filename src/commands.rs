@@ -224,6 +224,9 @@ impl Editor {
             }
         }
         self.clip = self.kill_ring.last().cloned();
+        if let Some(text) = &self.clip {
+            crate::clipboard::set_clipboard(text);
+        }
         self.this_kill = true;
     }
 
@@ -307,6 +310,14 @@ impl Editor {
     }
 
     fn yank(&mut self) {
+        if let Some(system_clipboard) = crate::clipboard::get_clipboard() {
+            if self.kill_ring.last().map(String::as_str) != Some(system_clipboard.as_str()) {
+                self.kill_ring.push(system_clipboard);
+                if self.kill_ring.len() > 100 {
+                    self.kill_ring.remove(0);
+                }
+            }
+        }
         let Some(t) = self.kill_ring.last().cloned() else {
             self.say("Kill ring is empty");
             return;
@@ -586,20 +597,60 @@ impl Editor {
     }
 
     fn save_some(&mut self) {
-        let mut n = 0;
-        let mut errs = 0;
-        for i in 0..self.bufs.len() {
-            let b = &mut self.bufs[i];
-            if b.kind == BufKind::File && b.modified && b.path.is_some() {
-                if b.save(None).is_ok() {
-                    n += 1;
-                } else {
-                    errs += 1;
+        let indices: Vec<usize> = self.bufs.iter().enumerate()
+            .filter(|(_, buffer)| buffer.kind == BufKind::File && buffer.modified && buffer.path.is_some())
+            .map(|(index, _)| index)
+            .collect();
+        if indices.is_empty() {
+            self.say("No modified file buffers");
+            return;
+        }
+        self.save_some_ask(indices, 0, 0, 0, Vec::new());
+    }
+
+    fn save_some_ask(&mut self, indices: Vec<usize>, next: usize, saved: usize, skipped: usize, errors: Vec<String>) {
+        if next == indices.len() {
+            self.refresh_git_info();
+            let result = format!("Saved {saved} buffer(s), skipped {skipped}");
+            self.say(if errors.is_empty() { result } else { format!("{result}; failed: {}", errors.join("; ")) });
+            return;
+        }
+        let index = indices[next];
+        let path = self.bufs[index].path.as_ref().unwrap().display();
+        self.mode = Mode::YesNo(YesNo {
+            q: format!("Save file {path}? (y or n) "),
+            act: YAct::SaveSome { indices, next, saved, skipped, errors },
+        });
+    }
+
+    fn save_some_response(
+        &mut self,
+        indices: Vec<usize>,
+        next: usize,
+        saved: usize,
+        skipped: usize,
+        mut errors: Vec<String>,
+        save: bool,
+    ) {
+        let index = indices[next];
+        let (saved, skipped) = if save {
+            match self.bufs[index].save(None) {
+                Ok(()) => {
+                    self.bufs[index].git_marks_version = u64::MAX;
+                    (saved + 1, skipped)
+                }
+                Err(error) => {
+                    errors.push(format!(
+                        "{}: {error}",
+                        self.bufs[index].path.as_ref().map(|path| path.display().to_string()).unwrap_or_default()
+                    ));
+                    (saved, skipped)
                 }
             }
-        }
-        self.refresh_git_info();
-        self.say(if errs > 0 { format!("Saved {n} buffer(s), {errs} failed") } else { format!("Saved {n} buffer(s)") });
+        } else {
+            (saved, skipped + 1)
+        };
+        self.save_some_ask(indices, next + 1, saved, skipped, errors);
     }
 
     fn buffer_choices(&self) -> Vec<String> {
@@ -668,7 +719,9 @@ impl Editor {
     }
 
     fn dired_cmd(&mut self) {
-        let dir = self.buf().path.as_ref().and_then(|p| p.parent()).map(|d| d.to_path_buf()).unwrap_or_else(|| self.cwd.clone());
+        let dir = self.dired_current_dir().or_else(|| {
+            self.buf().path.as_ref().and_then(|path| path.parent().map(std::path::Path::to_path_buf))
+        }).unwrap_or_else(|| self.cwd.clone());
         self.open_dir(&dir);
     }
 
@@ -713,6 +766,7 @@ impl Editor {
             }
         }
         t.push_str("\nGit status buffer: s stage, u unstage, RET visit, d diff, D diff all, c commit, C amend, l log, b checkout, x discard, P push, F pull, g refresh, q quit\n");
+        t.push_str("Dired: arrows/n/j and k navigate, h parent, RET/l open, c copy, x cut, p paste, r rename, d delete, % create, R refresh\n");
         t.push_str("Git log buffer: RET show commit.  Diff buffers: n/p next/previous hunk.\n");
         self.open_special("*Help*", BufKind::Help, &t, Vec::new(), false);
     }

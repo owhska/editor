@@ -191,7 +191,12 @@ fn render_window(
                 }
             }
         }
-        if kind != BufKind::File && li == cursor.line && is_active && !matches!(kind, BufKind::GitBlame | BufKind::Help) {
+        if kind != BufKind::File
+            && kind != BufKind::Dired
+            && li == cursor.line
+            && is_active
+            && !matches!(kind, BufKind::GitBlame | BufKind::Help)
+        {
             ov.push((0, len.max(1), Style::default().bg(c(SEL))));
         }
         paint_line(

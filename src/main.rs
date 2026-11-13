@@ -1,5 +1,6 @@
 //! ow: a Micro GNU Emacs clone in Rust with built-in git and wide syntax highlighting.
 mod buffer;
+mod clipboard;
 mod editor;
 #[cfg(test)]
 mod editor_tests;
@@ -21,7 +22,7 @@ const HELP: &str = "ow - Micro GNU Emacs in Rust, with built-in git and syntax h
 Usage: ow [+LINE] [FILE...]
        ow --list-languages | --version | --help
 
-Keys (Emacs): C-x C-f find-file, C-x C-s save, C-x C-c quit, C-s/C-r search,
+Keys (Emacs): C-x C-f find-file, C-x C-s save current, C-x s save modified buffers, C-x C-c quit, C-s/C-r search,
 M-% query-replace, M-x commands, C-h b all bindings.
 Git:     C-x g status, C-x v = diff, C-x v l log, C-x v g blame, C-x v a stage,
          C-x v c commit, C-x v o checkout, C-x v n/p hunks, C-x v F/P pull/push.
@@ -96,22 +97,20 @@ fn main() -> io::Result<()> {
 
     let mut ed = Editor::new();
     let mut line: Option<usize> = None;
-    let mut first = true;
     for a in &args {
         if let Some(n) = a.strip_prefix('+').and_then(|n| n.parse::<usize>().ok()) {
             line = Some(n);
             continue;
         }
         ed.find_file(a);
-        if first {
-            first = false;
-        }
         if let Some(n) = line.take() {
             ed.goto_line_in_cur(n, 0);
         }
     }
-    // show the first file given
-    if args.iter().any(|a| !a.starts_with('+')) {
+    let path_args: Vec<&String> = args.iter().filter(|arg| !arg.starts_with('+')).collect();
+    let opening_current_directory = path_args.len() == 1 && path_args[0] == ".";
+    // `kk .` explicitly asks to start in Dired; otherwise keep the first-file behavior.
+    if !path_args.is_empty() && !opening_current_directory {
         let msg = ed.msg.clone();
         let first_idx = ed.bufs.iter().position(|b| b.kind == buffer::BufKind::File).unwrap_or(0);
         ed.switch_to(first_idx);

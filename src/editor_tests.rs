@@ -260,3 +260,86 @@ fn window_splitting_and_navigation() {
 
     std::fs::remove_dir_all(dir).ok();
 }
+
+#[test]
+fn dired_file_operations() {
+    let dir = tmpdir("dired");
+    let source = dir.join("source.txt");
+    let target = dir.join("target");
+    let moved = dir.join("moved");
+    std::fs::write(&source, "clipboard test").unwrap();
+    std::fs::create_dir(&target).unwrap();
+    std::fs::create_dir(&moved).unwrap();
+    let mut e = editor_in(&dir);
+
+    e.open_dir(&dir);
+    let line = e.buf().meta.iter().position(|meta| matches!(meta, LineMeta::Path(path) if path == &source)).unwrap();
+    e.buf_mut().cursor = Pos::new(line, 2);
+    keys(&mut e, "c");
+    e.open_dir(&target);
+    keys(&mut e, "p");
+    assert_eq!(std::fs::read_to_string(target.join("source.txt")).unwrap(), "clipboard test");
+
+    e.open_dir(&target);
+    let copied = target.join("source.txt");
+    let line = e.buf().meta.iter().position(|meta| matches!(meta, LineMeta::Path(path) if path == &copied)).unwrap();
+    e.buf_mut().cursor = Pos::new(line, 2);
+    keys(&mut e, "x");
+    e.open_dir(&moved);
+    keys(&mut e, "p");
+    assert!(!copied.exists());
+    assert_eq!(std::fs::read_to_string(moved.join("source.txt")).unwrap(), "clipboard test");
+
+    e.open_dir(&moved);
+    let copied = moved.join("source.txt");
+    let line = e.buf().meta.iter().position(|meta| matches!(meta, LineMeta::Path(path) if path == &copied)).unwrap();
+    e.buf_mut().cursor = Pos::new(line, 2);
+    keys(&mut e, "r renamed.txt RET");
+    assert!(moved.join("renamed.txt").exists());
+    assert!(!copied.exists());
+
+    e.open_dir(&dir);
+    keys(&mut e, "% newdir/ RET");
+    let created = dir.join("newdir");
+    assert!(created.is_dir());
+    let line = e.buf().meta.iter().position(|meta| matches!(meta, LineMeta::Path(path) if path == &created)).unwrap();
+    e.buf_mut().cursor = Pos::new(line, 2);
+    keys(&mut e, "d");
+    assert!(!created.exists());
+
+    std::fs::remove_dir_all(dir).ok();
+}
+
+#[test]
+fn save_current_and_save_some_are_distinct() {
+    let dir = tmpdir("save-some");
+    let first = dir.join("first.txt");
+    let second = dir.join("second.txt");
+    std::fs::write(&first, "first").unwrap();
+    std::fs::write(&second, "second").unwrap();
+    let mut e = editor_in(&dir);
+
+    e.find_file("first.txt");
+    keys(&mut e, "C-e !");
+    e.find_file("second.txt");
+    keys(&mut e, "C-e ?");
+
+    keys(&mut e, "C-x C-s");
+    assert_eq!(std::fs::read_to_string(&second).unwrap(), "second?\n");
+    assert_eq!(std::fs::read_to_string(&first).unwrap(), "first");
+
+    keys(&mut e, "C-e !");
+    keys(&mut e, "C-x s");
+    assert!(matches!(&e.mode, Mode::YesNo(_)));
+    assert_eq!(std::fs::read_to_string(&first).unwrap(), "first");
+
+    keys(&mut e, "y");
+    assert!(matches!(&e.mode, Mode::YesNo(_)));
+    keys(&mut e, "n");
+    assert!(matches!(&e.mode, Mode::Normal));
+    assert_eq!(std::fs::read_to_string(&first).unwrap(), "first!\n");
+    assert_eq!(std::fs::read_to_string(&second).unwrap(), "second?\n");
+    assert!(e.bufs.iter().any(|buffer| buffer.path.as_deref() == Some(second.as_path()) && buffer.modified));
+
+    std::fs::remove_dir_all(dir).ok();
+}

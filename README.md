@@ -11,13 +11,16 @@ Binary name: `kk`.
 
 ## Emacs core
 Movement (`C-f C-b C-n C-p C-a C-e M-f M-b M-< M-> C-v M-v C-l M-g g M-m M-{ M-}`), kill ring
-(`C-k C-w M-w C-y M-y M-d M-DEL`), mark/region (`C-SPC C-x C-x C-x h`), undo/redo (`C-/ C-_ C-x u`, `M-_`),
+(`C-k C-w M-w C-y M-y M-d M-DEL`), mark/region (`C-SPC C-x C-x C-x h`), system clipboard integration
+for copied/killed text and `C-y` to paste, undo/redo (`C-/ C-_ C-x u`, `M-_`),
 incremental search (`C-s C-r`, smart-case), query-replace (`M-%`, y/n/!/./q), numeric args (`C-u`, `M-3`),
 files and buffers (`C-x C-f C-x C-s C-x C-w C-x s C-x b C-x k C-x C-b C-x d`), `M-x` with fuzzy completion,
 windows (`C-x 2` split below, `C-x 3` split right, `C-x 1` delete others, `C-x 0` close current, `C-x o` other window),
 auto-indent, `M-;` comment toggle (any language), `TAB`/`S-TAB` indent/unindent, tab-vs-space detection,
 CRLF preserved, bracketed paste, OSC 52 clipboard on kill/copy, auto-revert of unmodified buffers.
 `C-h b` lists every binding.
+
+`C-x C-s` saves only the current file buffer. `C-x s` asks whether to save each modified file buffer.
 
 ## Git (all via libgit2)
 | Key | Command |
@@ -51,9 +54,24 @@ Default colours are the custom palette in `syntax::palette` (edit it to retheme 
 Adding a language = one entry in `src/langs.rs`.
 
 ## Not implemented (vs. upstream mg)
-Keyboard macros, rectangles, `dired` beyond browsing/opening, `.mg` startup files/extensions,
-registers, tags/cscope. Push/pull use ssh-agent or the git credential helper and were not tested against a
-real remote.
+Keyboard macros, rectangles, `.mg` startup files/extensions, registers, tags/cscope. Push/pull use
+ssh-agent or the git credential helper and were not tested against a real remote.
+
+## Dired
+Run `kk .` to open Dired in the current directory, or use `C-x d` inside the editor. Use arrows or
+`n`/`j` and `k` to move, `RET`/`l` to open an entry, and `h` to go to the parent directory. `c` copies
+an entry, `x` cuts it, and `p` pastes it into the current directory. `r` renames, `d` deletes, `%`
+creates a file or directory (end the name with `/` to create a directory), and `R` refreshes the listing.
+
+## Clipboard
+Text and file operations use separate clipboards. `C-SPC` sets the mark; move to select text, then use
+`M-w` to copy or `C-w` to cut. `C-y` pastes at the cursor and reads the system clipboard, so text copied
+from another application can be pasted directly; when the system clipboard has no text, it uses the
+editor's kill ring. Kills such as `C-k` also update the system clipboard.
+
+In Dired, select a file or directory and use `c` to copy or `x` to cut, then move to the destination
+directory and press `p`. File copies can be pasted multiple times; a cut item is moved on paste. These
+Dired keys operate on files and do not change the text clipboard.
 
 ## Layout
 `buffer.rs` text/undo/search · `editor.rs` modes, prompts, dispatch · `commands.rs` Emacs commands + keymap ·
